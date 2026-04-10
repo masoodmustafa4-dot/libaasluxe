@@ -1,0 +1,120 @@
+/* ================= FULL STACK LIVE BUSINESS SYSTEM (FRONTEND + BACKEND) =================
+STACK:
+✔ React Frontend
+✔ Node.js + Express Backend
+✔ Live Orders API
+✔ Admin Stats API
+================================================================================ */
+
+/* ================= FRONTEND (React) ================= */
+import { useMemo, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ShoppingCart } from "lucide-react";
+
+const API = "http://localhost:5000";
+
+const PRODUCTS = [
+  { id: 1, name: "Stitched Bridal Suit", price: 120, image: "https://images.unsplash.com/photo-1520975958221-7c6d4d8b1c3f" },
+  { id: 2, name: "Unstitched Lawn Suit", price: 60, image: "https://images.unsplash.com/photo-1483985988355-763728e1935b" },
+  { id: 3, name: "3 Piece Embroidered Suit", price: 95, image: "https://images.unsplash.com/photo-1496747611176-843222e1e57c" }
+];
+
+export default function App() {
+  const [cart, setCart] = useState([]);
+  const [search, setSearch] = useState("");
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+
+  const filtered = PRODUCTS.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const total = useMemo(() => cart.reduce((s,i)=>s+i.price,0),[cart]);
+
+  const addToCart = (p) => setCart([...cart, p]);
+
+  const placeOrder = async () => {
+    const order = { name, phone, address, items: cart, total };
+
+    const res = await fetch(API + "/api/order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(order)
+    });
+
+    const data = await res.json();
+    alert("Order placed: " + data.status);
+    setCart([]);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+
+      <header className="flex justify-between p-4 bg-black text-white">
+        <h1>LIVE FASHION STORE</h1>
+        <div><ShoppingCart/> {cart.length}</div>
+      </header>
+
+      <div className="p-4 bg-white m-4">
+        <Input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} />
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4 p-4">
+        {filtered.map(p => (
+          <Card key={p.id}>
+            <CardContent className="p-3">
+              <img src={p.image} className="h-48 w-full object-cover" />
+              <h2>{p.name}</h2>
+              <p>${p.price}</p>
+              <Button onClick={()=>addToCart(p)}>Add</Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="p-4 m-4 bg-white">
+        <h2>Checkout</h2>
+        <Input placeholder="Name" onChange={e=>setName(e.target.value)} />
+        <Input placeholder="Phone" onChange={e=>setPhone(e.target.value)} />
+        <Input placeholder="Address" onChange={e=>setAddress(e.target.value)} />
+        <Button onClick={placeOrder}>Place Order</Button>
+      </div>
+
+    </div>
+  );
+}
+
+/* ================= BACKEND (Node.js + Express) ================= */
+
+const express = require("express");
+const cors = require("cors");
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+let orders = [];
+
+app.post("/api/order", (req, res) => {
+  const order = { id: Date.now(), ...req.body, status: "received" };
+  orders.push(order);
+  res.json({ status: "success", orderId: order.id });
+});
+
+app.get("/api/orders", (req, res) => res.json(orders));
+
+app.get("/api/stats", (req, res) => {
+  const revenue = orders.reduce((s,o)=>s+o.total,0);
+  res.json({ orders: orders.length, revenue });
+});
+
+app.listen(5000, () => console.log("Server running on 5000"));
+
+/* ================= DEPLOYMENT ================= */
+/*
+Frontend: Vercel / Netlify
+Backend: Render / Railway
+Database upgrade: MongoDB / Firebase
+Payments: JazzCash API integration required
+*/
